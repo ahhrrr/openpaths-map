@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>OpenPaths Map</title>
+<meta charset="utf-8">
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+  <script>
+    $(function() {
+      d3.json("openpaths.json", convertToGeoJSON);
+    });
+
+    function convertToGeoJSON(error, data) {
+      var locationsFromOpenPaths = d3.map(data);
+      var geoJSONFeatures = [];
+
+      locationsFromOpenPaths.forEach(function(key, value) {
+        var feature = {
+          type: "Feature",
+          id: key,
+          geometry: {
+            type: "Point",
+            coordinates: [value["lon"], value["lat"]]
+          },
+          properties: {
+            version: value["version"],
+            timestamp: value["t"],
+            device: value["device"],
+            altitude: value["alt"],
+            os: value["os"]
+          }
+        };
+
+        geoJSONFeatures.push(feature);
+      });
+
+      var locations = { type: "FeatureCollection", features: geoJSONFeatures };
+    };
+
+
+  </script>
+</head>
+<body>
+  <div id="content">
+    <div id="chart"></div>
+  </div>
+</body>
+</html>
