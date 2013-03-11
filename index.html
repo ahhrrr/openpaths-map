@@ -4,44 +4,61 @@
 <title>OpenPaths Map</title>
 <meta charset="utf-8">
   <style>
-    .usa { fill: #ddc; }
+    #map { height: 500px; }
   </style>
+  <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.5/leaflet.css">
+  <!--[if lte IE 8]>
+      <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.5/leaflet.ie.css">
+  <![endif]-->
+
   <script src="http://d3js.org/d3.v3.min.js"></script>
   <script src="http://d3js.org/topojson.v0.min.js"></script>
   <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+  <script src="http://cdn.leafletjs.com/leaflet-0.5/leaflet.js"></script>
+
+
   <script>
     $(function() {
-      var width = 960,
-          height = 1160;
+      function project(x) {
+        var point = map.latLngToLayerPoint(new L.LatLng(x[1], x[0]));
+        return [point.x, point.y];
+      }
 
-      var svg = d3.select("body").append("svg")
-          .attr("width", width)
-          .attr("height", height);
 
-      d3.json("us.json", function(error, us) {
-        console.log(us);
+      var map = L.map('map').setView([39.833333, -98.585833], 3);
+      L.tileLayer('http://{s}.tile.cloudmade.com/0156eb15235c433487c65cf50235a587/998/256/{z}/{x}/{y}.png', {
+          attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://cloudmade.com">CloudMade</a>',
+          maxZoom: 18
+      }).addTo(map);
+      var svg = d3.select(map.getPanes().overlayPane).append("svg");
+      var g = svg.append("g").attr("class", "leaflet-zoom-hide");
 
-        var subunits = topojson.object(us, us.objects.subunits);
-        var projection = d3.geo.albersUsa()
-            .scale(1000)
-            .translate([width / 2, height / 2]);
+      d3.json("openpaths.json", function(error, data) {
+        var locations = convertToGeoJSON(data);
+        var bounds = d3.geo.bounds(locations);
+        var path = d3.geo.path().projection(project);
 
-        var path = d3.geo.path()
-            .projection(projection);
+        var feature = g.selectAll("path")
+            .data(locations.features)
+            .enter().append("path");
 
-        svg.append("path")
-            .datum(subunits)
-            .attr("d", path)
-            .attr("class", "usa");
+        map.on("viewreset", reset);
+        reset();
 
-        d3.json("openpaths.json", function(error, data) {
-          var locations = convertToGeoJSON(data);
-          debugger
-          svg.append("path")
-            .datum(locations)
-            .attr("d", path)
-            .attr("class", "place");
-        });
+        function reset() {
+          var bottomLeft = project(bounds[0]),
+              topRight = project(bounds[1]);
+
+          svg .attr("width", topRight[0] - bottomLeft[0])
+              .attr("height", bottomLeft[1] - topRight[1])
+              .style("margin-left", bottomLeft[0] + "px")
+              .style("margin-top", topRight[1] + "px");
+
+          g   .attr("transform", "translate(" + -bottomLeft[0] + "," + -topRight[1] + ")");
+
+          feature.attr("d", path);
+        };
+
       });
     });
 
@@ -77,7 +94,7 @@
 </head>
 <body>
   <div id="content">
-    <div id="chart"></div>
+    <div id="map"></div>
   </div>
 </body>
 </html>
